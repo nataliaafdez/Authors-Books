@@ -1,0 +1,77 @@
+version: "3.9"
+
+services:
+  consul:
+    image: hashicorp/consul:1.18
+    command: ["agent","-dev","-client=0.0.0.0"]
+    ports:
+      - "8500:8500"
+    networks: [abnet]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8500/v1/status/leader"]
+      interval: 3s
+      timeout: 2s
+      retries: 30
+
+
+  metadata-grpc:
+    build:
+      context: .
+      dockerfile: ./metadata/Dockerfile
+      target: metadata-grpc
+    environment:
+      ADDR_GRPC: ":9092"
+      CONSUL_ADDR: consul:8500
+      SERVICE_HOST: metadata-grpc
+    depends_on:
+      consul:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+    networks: [abnet]
+    restart: unless-stopped
+
+
+  books-grpc:
+    build:
+      context: .
+      dockerfile: ./books/Dockerfile
+      target: books-grpc
+    environment:
+      ADDR_GRPC: ":9091"
+      CONSUL_ADDR: consul:8500
+      SERVICE_HOST: books-grpc
+    depends_on:
+      consul:
+        condition: service_healthy
+    ports:
+      - "9091:9091"
+    networks: [abnet]
+    restart: unless-stopped
+
+
+  authors-grpc:
+    build:
+      context: .
+      dockerfile: ./authors/Dockerfile
+      target: authors-grpc
+    environment:
+      ADDR_GRPC: ":9090"
+      BOOKS_ADDR: "books-grpc:9091"
+      METADATA_ADDR: "metadata-grpc:9092"
+      CONSUL_ADDR: consul:8500
+      SERVICE_HOST: authors-grpc
+    depends_on:
+      consul:
+        condition: service_healthy
+      books-grpc:
+        condition: service_started
+      metadata-grpc:
+        condition: service_started
+    ports:
+      - "9090:9090"
+    networks: [abnet]
+    restart: unless-stopped
+
+networks:
+  abnet: {}

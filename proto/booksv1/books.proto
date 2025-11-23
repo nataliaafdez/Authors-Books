@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package books.v1;
+option go_package = "authorsbooks/proto/booksv1;booksv1";
+
+message Book {
+  int64 id = 1;
+  string title = 2;
+  int32 year = 3;
+  string genre = 4;
+  string language = 5;
+  int64 author_id = 6;
+}
+
+message AddBookRequest {
+  int64 author_id = 1;
+  string title = 2;
+  int32 year = 3;
+  string genre = 4;
+  string language = 5;
+}
+message AddBookResponse {
+  repeated Book books = 1; // lista completa despues de crear el libro
+}
+
+service BooksService {
+  rpc AddBook(AddBookRequest) returns (AddBookResponse);
+}

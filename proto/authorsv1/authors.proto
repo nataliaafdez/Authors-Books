@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package authors.v1;
+
+option go_package = "authorsbooks/proto/authorsv1;authorsv1";
+
+
+message Author {
+  int64 id = 1;
+  string name = 2;
+}
+
+message Book {
+  int64 id = 1;
+  string title = 2;
+  int32 year = 3;
+  string genre = 4;
+  string language = 5;
+}
+
+// create author
+
+message CreateAuthorRequest {
+  string name = 1;
+}
+
+message CreateAuthorResponse {
+  Author author = 1;
+}
+
+// get authorj
+
+message GetAuthorRequest {
+  int64 id = 1;
+}
+
+message GetAuthorResponse {
+  Author author = 1;
+  repeated Book books = 2;
+}
+
+// add book to autthor
+
+message AddBookToAuthorRequest {
+  int64 author_id = 1;
+  string title = 2;
+  int32 year = 3;
+  string genre = 4;
+  string language = 5;
+}
+
+message AddBookToAuthorResponse {
+  int64 author_id = 1;
+  string name = 2;
+  repeated Book books = 3;
+}
+
+// servicio
+
+service AuthorsService {
+  rpc CreateAuthor(CreateAuthorRequest) returns (CreateAuthorResponse);
+  rpc GetAuthor(GetAuthorRequest) returns (GetAuthorResponse);
+  rpc AddBookToAuthor(AddBookToAuthorRequest) returns (AddBookToAuthorResponse);
+}

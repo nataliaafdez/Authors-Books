@@ -1,0 +1,26 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+authors-grpc
+books-grpc
+metadata-grpc
+
+# Go build cache
+/bin/
+/pkg/
+/build/
+/dist/
+
+# Kubernetes & Docker
+*.log
+*.out
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode
+.idea

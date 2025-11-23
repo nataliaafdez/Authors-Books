@@ -1,0 +1,222 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: authorsbooks
+---
+# Authors
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authors-grpc
+  namespace: authorsbooks
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authors-grpc
+  template:
+    metadata:
+      labels:
+        app: authors-grpc
+    spec:
+      containers:
+      - name: authors-grpc
+        image: authorsbooks-authors-grpc:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9090
+        env:
+        - name: ADDR_GRPC
+          value: ":9090"
+        - name: BOOKS_ADDR
+          value: "books-grpc:9091"
+        - name: METADATA_ADDR
+          value: "metadata-grpc:9092"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authors-grpc
+  namespace: authorsbooks
+spec:
+  type: LoadBalancer    
+  selector:
+    app: authors-grpc
+  ports:
+  - name: grpc
+    port: 9090
+    targetPort: 9090
+---
+# books
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: books-grpc
+  namespace: authorsbooks
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: books-grpc
+  template:
+    metadata:
+      labels:
+        app: books-grpc
+    spec:
+      containers:
+      - name: books-grpc
+        image: authorsbooks-books-grpc:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9091
+        env:
+        - name: ADDR_GRPC
+          value: ":9091"
+        - name: DATABASE_URL
+          value: "postgres://abuser:abpass@postgres:5432/authorsbooks?sslmode=disable"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: books-grpc
+  namespace: authorsbooks
+spec:
+  type: ClusterIP     
+  selector:
+    app: books-grpc
+  ports:
+  - name: grpc
+    port: 9091
+    targetPort: 9091
+---
+# metadata
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metadata-grpc
+  namespace: authorsbooks
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metadata-grpc
+  template:
+    metadata:
+      labels:
+        app: metadata-grpc
+    spec:
+      containers:
+      - name: metadata-grpc
+        image: authorsbooks-metadata-grpc:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9092
+        env:
+        - name: ADDR_GRPC
+          value: ":9092"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metadata-grpc
+  namespace: authorsbooks
+spec:
+  type: ClusterIP       
+  selector:
+    app: metadata-grpc
+  ports:
+  - name: grpc
+    port: 9092
+    targetPort: 9092
+---
+# base de datos 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: authorsbooks
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "authorsbooks"
+        - name: POSTGRES_USER
+          value: "abuser"
+        - name: POSTGRES_PASSWORD
+          value: "abpass"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: authorsbooks
+spec:
+  type: ClusterIP      
+  selector:
+    app: postgres
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+---
+# autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: authors-grpc-hpa
+  namespace: authorsbooks
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: authors-grpc
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50   # si pasa de ~50% CPU promedio, escala

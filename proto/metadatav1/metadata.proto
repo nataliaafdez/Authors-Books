@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package metadata.v1;
+option go_package = "authorsbooks/proto/metadatav1;metadatav1";
+
+message GetMetadataRequest {
+  string id = 1;
+}
+
+message GetMetadataResponse {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+}
+
+message PutMetadataRequest {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+}
+
+message PutMetadataResponse {}
+
+service MetadataService {
+  rpc GetMetadata(GetMetadataRequest) returns (GetMetadataResponse);
+  rpc PutMetadata(PutMetadataRequest) returns (PutMetadataResponse);
+}

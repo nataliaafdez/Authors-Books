@@ -1,0 +1,9 @@
+http:
+  middlewares:
+    strip-authors:
+      stripPrefix:
+        prefixes:
+          - /api/v1
+  routers:
+    # (usamos labels en docker-compose, este archivo queda para reglas extra si necesitas)
+  services: {}
