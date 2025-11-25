@@ -9,10 +9,10 @@ client.load(
 
 export const options = {
   stages: [
-    { duration: '10s', target: 10 },
-    { duration: '20s', target: 30 },
-    { duration: '20s', target: 50 },
-    { duration: '10s', target: 0 },
+    { duration: '30s', target: 300},  
+    { duration: '30s', target: 400 },  
+    { duration: '1m', target: 600},  
+    { duration: '10s', target: 0 },   
   ],
   thresholds: {
     checks: ['rate>0.95'], 
@@ -21,20 +21,42 @@ export const options = {
 
 export default () => {
   const addr = __ENV.AUTHORS_ADDR;
-  if (!addr) {
-    throw new Error('AUTHORS_ADDR no está definido');
-  }
+  if (!addr) throw new Error('AUTHORS_ADDR no está definido');
 
   client.connect(addr, { plaintext: true });
 
-  const res = client.invoke('authors.v1.AuthorsService/CreateAuthor', {
-    name: 'TestUser',
-  });
+  // 1) Crear autor
+  const author = client.invoke(
+    'authors.v1.AuthorsService/CreateAuthor',
+    { name: `User_${Math.random()}` }
+  );
 
-  check(res, {
-    'status OK': (r) => r && r.status === grpc.StatusOK,
-  });
+  check(author, { 'create author OK': (r) => r && r.status === grpc.StatusOK });
+
+  const authorId = author.message.author.id;
+
+  // 2) Agregar libro (ESTRESA los 3 microservicios)
+  const book = client.invoke(
+    'authors.v1.AuthorsService/AddBookToAuthor',
+    {
+      author_id: authorId,
+      title: `Libro_${Math.random()}`,
+      year: 2020,
+      genre: "Ficción",
+      language: "ES"
+    }
+  );
+
+  check(book, { 'add book OK': (r) => r && r.status === grpc.StatusOK });
+
+  // 3) Consultar autor + libros
+  const getRes = client.invoke(
+    'authors.v1.AuthorsService/GetAuthor',
+    { id: authorId }
+  );
+
+  check(getRes, { 'get author OK': (r) => r && r.status === grpc.StatusOK });
 
   client.close();
-  sleep(1);
+  sleep(0.5);
 };
